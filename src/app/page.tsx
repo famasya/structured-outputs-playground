@@ -703,6 +703,9 @@ export default function Home() {
           </Card>
         </div>
       </div>
+      <div className="text-center mt-8">
+        Compare OpenRouter models price on <Link href="https://compare-openrouter-models.pages.dev/" className="bg-blue-200 text-blue-700 px-2 py-1 rounded hover:underline-offset-2 hover:underline" target="_blank">compare-openrouter-models.pages.dev</Link>
+      </div>
     </div>
   )
 }
