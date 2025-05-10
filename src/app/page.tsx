@@ -252,7 +252,7 @@ export default function Home() {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.origin,
-          "X-Title": "OpenRouter Structured Output Tester",
+          "X-Title": "OpenRouter Structured Output Playground",
         },
         body: JSON.stringify({
           model: model,
@@ -394,7 +394,7 @@ export default function Home() {
   return (
     <div className="container mx-auto py-6 px-6">
       <h1 className="text-lg md:text-2xl font-medium mb-6 flex items-center justify-between">
-        <span>OpenRouter Structured Output Tester</span>
+        <span>OpenRouter Structured Output Playground</span>
         <div className="flex flex-row gap-2">
           <Button
             variant="outline"
