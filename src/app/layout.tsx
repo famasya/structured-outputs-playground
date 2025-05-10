@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenRouter Playground",
+  title: "OpenRouter Structured Outputs Playground",
   description: "Playground for testing OpenRouter's structured output feature.",
 };
 
