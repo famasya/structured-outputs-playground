@@ -22,7 +22,8 @@ import { Toggle } from "@/components/ui/toggle"
 import { Validator } from "jsonschema"
 import { Check, ChevronDown, Github, Key, Play, Plus, Search, Sparkles, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useDebounce } from 'react-use'
 
 interface Model {
   id: string
@@ -41,23 +42,6 @@ interface TestScenario {
   systemPrompt: string
   userPrompt: string
   jsonSchema: string
-}
-
-// Custom hook for debounced value
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
-
-    return () => {
-      clearTimeout(handler)
-    }
-  }, [value, delay])
-
-  return debouncedValue
 }
 
 function formatJson(content: string): string {
@@ -93,14 +77,17 @@ export default function Home() {
     "Generate a profile for a fictional character named Alex who loves technology.",
   )
   const [output, setOutput] = useState("")
-  console.log(output)
   const [isLoading, setIsLoading] = useState(false)
   const [models, setModels] = useState<Model[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [modelError, setModelError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [showOnlyStructuredModels, setShowOnlyStructuredModels] = useState(false)
+  const [showOnlyStructuredModels, setShowOnlyStructuredModels] = useState(true)
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("")
+  const [, cancel] = useDebounce(() => {
+    setDebouncedSearchValue(searchTerm)
+  }, 500, [searchTerm])
   const [scenarios, setScenarios] = useState<TestScenario[]>([
     {
       id: "1",
@@ -147,9 +134,6 @@ export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null)
   const [scenarioResults, setScenarioResults] = useState<Record<string, string>>({})
   const [runningAllScenarios, setRunningAllScenarios] = useState(false)
-
-  // Debounced search term
-  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   // Initialize JSON schema validator
   const validator = new Validator()
@@ -342,15 +326,17 @@ export default function Home() {
   }
 
   // Filter models based on search term and structured output toggle
-  const filteredModels = models.filter((model) => {
-    const matchesSearch =
-      model.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      model.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+  const filteredModels = useMemo(() => {
+    return models.filter((model) => {
+      const matchesSearch =
+        model.id.toLowerCase().includes(debouncedSearchValue.toLowerCase()) ||
+        model.name.toLowerCase().includes(debouncedSearchValue.toLowerCase())
 
-    const matchesStructured = !showOnlyStructuredModels || supportsStructuredOutput(model)
+      const matchesStructured = !showOnlyStructuredModels || supportsStructuredOutput(model)
+      return matchesSearch && matchesStructured
+    })
+  }, [models, showOnlyStructuredModels, debouncedSearchValue, supportsStructuredOutput])
 
-    return matchesSearch && matchesStructured
-  })
 
   // Add a new test scenario
   const addScenario = () => {
@@ -393,8 +379,8 @@ export default function Home() {
 
   return (
     <div className="container mx-auto py-6 px-6">
-      <h1 className="text-lg md:text-2xl font-medium mb-6 flex items-center justify-between">
-        <span>OpenRouter Structured Output Playground</span>
+      <h1 className="text-lg md:text-2xl font-medium mb-6 flex flex-col md:flex-row gap-2 items-center justify-between">
+        <div>OpenRouter Structured Output Playground</div>
         <div className="flex flex-row gap-2">
           <Button
             variant="outline"
@@ -446,12 +432,16 @@ export default function Home() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[300px]">
                       <div className="p-2 space-y-2">
-                        <div className="flex items-center border rounded-md px-3 py-1">
+                        <div className="flex items-center border rounded-md px-3 py-1" onKeyDown={(e) => e.stopPropagation()}>
                           <Search className="h-4 w-4 mr-2 text-muted-foreground" />
                           <Input
                             placeholder="Search models..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setSearchTerm(e.target.value)
+                            }}
                             className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                           />
                         </div>
@@ -460,12 +450,12 @@ export default function Home() {
                           onPressedChange={setShowOnlyStructuredModels}
                           className="w-full justify-start"
                         >
-                          Show supported models only
+                          Show all models
                         </Toggle>
                       </div>
                       <div className="h-px bg-border my-1" />
                       <div className="relative">
-                        <ScrollArea className="h-[300px] overflow-y-auto">
+                        <ScrollArea className="h-[300px] px-2 overflow-y-auto">
                           {filteredModels.length > 0 ? (
                             filteredModels.map((model) => (
                               <DropdownMenuItem
@@ -481,7 +471,7 @@ export default function Home() {
                                   {supportsStructuredOutput(model) && (
                                     <Badge
                                       variant="outline"
-                                      className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                      className="text-xs bg-green-100 border-green-500 text-green-800 dark:bg-green-900 dark:text-green-100"
                                     >
                                       JSON
                                     </Badge>
@@ -492,7 +482,7 @@ export default function Home() {
                             ))
                           ) : (
                             <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                              No models found matching "{debouncedSearchTerm}"
+                              No models found matching "{searchTerm}"
                             </div>
                           )}
                         </ScrollArea>
